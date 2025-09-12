@@ -1,4 +1,5 @@
 ﻿using AnimalesPerdidos.Dtos.Usuario;
+using AnimalesPerdidos.Model.Entities;
 using AnimalesPerdidos.Services.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
@@ -11,41 +12,30 @@ namespace AnimalesPerdidos.Services.Implementations
 {
     public class AuthService : IAuthService
     {
-        private readonly UserManager<IdentityUser> _userManager;
+        private readonly UserManager<ApplicationUser> _userManager;
         private readonly IConfiguration _configuration;
 
-        public AuthService(UserManager<IdentityUser> userManager, IConfiguration configuration)
+        public AuthService(UserManager<ApplicationUser> userManager, IConfiguration configuration)
         {
             _userManager = userManager;
             _configuration = configuration;
         }
 
-        public async Task<AuthResponseDto> RegisterAsync(RegisterRequestDto model)
+        public async Task<IdentityResult> RegisterAsync(RegisterRequestDto model)
         {
             var userExists = await _userManager.FindByNameAsync(model.UserName);
             if (userExists != null)
             {
-                return new AuthResponseDto { Success = false, Errors = new[] { "User already exists" } };
+                return IdentityResult.Failed(new IdentityError { Description = "User already exists" });
             }
 
-            var user = new IdentityUser
+            var user = new ApplicationUser
             {
                 UserName = model.UserName,
                 Email = model.Email
             };
 
-            var result = await _userManager.CreateAsync(user, model.Password);
-            if (!result.Succeeded)
-            {
-                return new AuthResponseDto
-                {
-                    Success = false,
-                    Errors = result.Errors.Select(e => e.Description)
-                };
-            }
-
-            var token = GenerateJwtToken(user);
-            return new AuthResponseDto { Success = true, Token = token };
+            return await _userManager.CreateAsync(user, model.Password);
         }
 
         public async Task<AuthResponseDto> LoginAsync(LoginRequestDto model)
@@ -60,33 +50,43 @@ namespace AnimalesPerdidos.Services.Implementations
                 };
             }
 
-            var token = GenerateJwtToken(user);
+            var token = await GenerateJwtToken(user);
             return new AuthResponseDto { Success = true, Token = token };
         }
 
-        private string GenerateJwtToken(IdentityUser user)
+        private async Task<string> GenerateJwtToken(ApplicationUser user)
         {
-            var jwtSettings = _configuration.GetSection("JwtSettings");
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]!));
+            var jwtSettings = _configuration.GetSection("JwtSettings"); 
+            var key = jwtSettings["SecretKey"];
 
-            var claims = new[]
-            {
-                new Claim(JwtRegisteredClaimNames.Sub, user.UserName!),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                new Claim(ClaimTypes.NameIdentifier, user.Id)
-            };
+            if (string.IsNullOrEmpty(key))
+                throw new InvalidOperationException("JWT Key is missing from configuration.");
 
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
+            var creds = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+
+            var claims = new List<Claim>
+    {
+         new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()), 
+         new Claim(JwtRegisteredClaimNames.UniqueName, user.UserName ?? ""),
+         new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+    };
+
+            // Agregar roles
+            var roles = await _userManager.GetRolesAsync(user);
+            claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
+
             var token = new JwtSecurityToken(
                 issuer: jwtSettings["Issuer"],
                 audience: jwtSettings["Audience"],
                 claims: claims,
-                expires: DateTime.UtcNow.AddHours(3),
+                expires: DateTime.UtcNow.AddMinutes(int.Parse(jwtSettings["ExpireMinutes"] ?? "60")),
                 signingCredentials: creds
             );
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
+
     }
 }
 

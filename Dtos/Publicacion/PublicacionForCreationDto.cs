@@ -14,5 +14,7 @@ namespace AnimalesPerdidos.Dtos.Publicacion
         [MaxLength(200)] public string? Contacto { get; set; }
         // reCAPTCHA token del cliente
         [Required] public string RecaptchaToken { get; set; } = null!;
+
+        public List<IFormFile>? Imagenes { get; set; }
     }
 }

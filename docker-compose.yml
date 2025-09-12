@@ -1,0 +1,38 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:15
+    container_name: animalesperdidos-db
+    environment:
+      POSTGRES_DB: animales_perdidos
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: cacatua2
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: animalesperdidos-web
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=animales_perdidos;Username=postgres;Password=cacatua2"
+      DOTNET_ENVIRONMENT: Development
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+
+    
+volumes:
+  pgdata:

@@ -148,7 +148,7 @@ namespace AnimalesPerdidos.Migrations
 
                     b.HasIndex("AuthorId");
 
-                    b.ToTable("Publications");
+                    b.ToTable("publicacion");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", b =>

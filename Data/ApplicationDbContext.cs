@@ -10,7 +10,7 @@ namespace AnimalesPerdidos.Data
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
 
-        public DbSet<Publicacion> Publications => Set<Publicacion>();
+        public DbSet<Publicacion> publicacion => Set<Publicacion>();
 
 
         protected override void OnModelCreating(ModelBuilder builder)

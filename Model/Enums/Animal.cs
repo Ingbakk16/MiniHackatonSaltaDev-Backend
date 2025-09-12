@@ -5,6 +5,7 @@
         Perro,
         Gato,
         Caballo,
+        Ave,
         Otro
     }
 }

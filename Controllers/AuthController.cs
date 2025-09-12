@@ -20,7 +20,7 @@ namespace AnimalesPerdidos.Controllers
         public async Task<IActionResult> Register([FromBody] RegisterRequestDto model)
         {
             var result = await _authService.RegisterAsync(model);
-            if (!result.Success)
+            if (!result.Succeeded)
                 return BadRequest(result);
 
             return Ok(result);

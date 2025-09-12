@@ -1,10 +1,11 @@
 ﻿using AnimalesPerdidos.Dtos.Usuario;
+using Microsoft.AspNetCore.Identity;
 
 namespace AnimalesPerdidos.Services.Interfaces
 {
     public interface IAuthService
     {
-        Task<AuthResponseDto> RegisterAsync(RegisterRequestDto model);
+        Task<IdentityResult> RegisterAsync(RegisterRequestDto model);
         Task<AuthResponseDto> LoginAsync(LoginRequestDto model);
     }
 }
